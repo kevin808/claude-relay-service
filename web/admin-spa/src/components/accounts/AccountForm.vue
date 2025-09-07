@@ -293,53 +293,44 @@
               </div>
             </div>
 
-            <!-- Gemini 项目 ID 字段 -->
-            <div v-if="form.platform === 'gemini'">
-              <label class="mb-3 block text-sm font-semibold text-gray-700 dark:text-gray-300"
-                >项目 ID (可选)</label
-              >
-              <input
-                v-model="form.projectId"
-                class="form-input w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-400"
-                placeholder="例如：verdant-wares-464411-k9"
-                type="text"
-              />
-              <div class="mt-2 rounded-lg border border-yellow-200 bg-yellow-50 p-3">
-                <div class="flex items-start gap-2">
-                  <i class="fas fa-info-circle mt-0.5 text-yellow-600" />
-                  <div class="text-xs text-yellow-700">
-                    <p class="mb-1 font-medium">Google Cloud/Workspace 账号需要提供项目 ID</p>
-                    <p>
-                      某些 Google 账号（特别是绑定了 Google Cloud 的账号）会被识别为 Workspace
-                      账号，需要提供额外的项目 ID。
-                    </p>
-                    <div class="mt-2 rounded border border-yellow-300 bg-white p-2">
-                      <p class="mb-1 font-medium">如何获取项目 ID：</p>
-                      <ol class="ml-2 list-inside list-decimal space-y-1">
-                        <li>
-                          访问
-                          <a
-                            class="font-medium text-blue-600 hover:underline"
-                            href="https://console.cloud.google.com/welcome"
-                            target="_blank"
-                            >Google Cloud Console</a
-                          >
-                        </li>
-                        <li>
-                          复制<span class="font-semibold text-red-600">项目 ID（Project ID）</span
-                          >，通常是字符串格式
-                        </li>
-                        <li class="text-red-600">
-                          ⚠️ 注意：要复制项目 ID（Project ID），不要复制项目编号（Project Number）！
-                        </li>
-                      </ol>
+            <!-- Gemini-specific fields -->
+            <div v-if="form.platform === 'gemini'" class="space-y-4">
+              <div>
+                <label class="mb-3 block text-sm font-semibold text-gray-700 dark:text-gray-300">项目 ID (可选)</label>
+                <input
+                  v-model="form.projectId"
+                  class="form-input w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-400"
+                  placeholder="例如：verdant-wares-464411-k9"
+                  type="text"
+                />
+                <div class="mt-2 rounded-lg border border-yellow-200 bg-yellow-50 p-3">
+                  <div class="flex items-start gap-2">
+                    <i class="fas fa-info-circle mt-0.5 text-yellow-600" />
+                    <div class="text-xs text-yellow-700">
+                      <p class="mb-1 font-medium">Google Cloud/Workspace 账号需要提供项目 ID</p>
+                      <p>某些 Google 账号（特别是绑定了 Google Cloud 的账号）会被识别为 Workspace 账号，需要提供额外的项目 ID。</p>
+                      <div class="mt-2 rounded border border-yellow-300 bg-white p-2">
+                        <p class="mb-1 font-medium">如何获取项目 ID：</p>
+                        <ol class="ml-2 list-inside list-decimal space-y-1">
+                          <li>访问 <a class="font-medium text-blue-600 hover:underline" href="https://console.cloud.google.com/welcome" target="_blank">Google Cloud Console</a></li>
+                          <li>复制<span class="font-semibold text-red-600">项目 ID（Project ID）</span>，通常是字符串格式</li>
+                          <li class="text-red-600">⚠️ 注意：要复制项目 ID（Project ID），不要复制项目编号（Project Number）！</li>
+                        </ol>
+                      </div>
+                      <p class="mt-2"><strong>提示：</strong>如果您的账号是普通个人账号（未绑定 Google Cloud），请留空此字段。</p>
                     </div>
-                    <p class="mt-2">
-                      <strong>提示：</strong>如果您的账号是普通个人账号（未绑定 Google
-                      Cloud），请留空此字段。
-                    </p>
                   </div>
                 </div>
+              </div>
+              <div>
+                <label class="mb-3 block text-sm font-semibold text-gray-700 dark:text-gray-300">API Key (用于图像模型)</label>
+                <input
+                  v-model="form.apiKey"
+                  class="form-input w-full border-gray-300 font-mono text-xs dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-400"
+                  placeholder="为通用 Gemini API 输入 API Key"
+                  type="password"
+                />
+                <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">用于访问标准 Gemini API (例如图像模型) 的 API Key。通过 OAuth 或手动输入 Access Token 添加的账户，也需要在此填写独立的 API Key 才能使用图像功能。</p>
               </div>
             </div>
 
@@ -1442,20 +1433,28 @@
             </div>
           </div>
 
-          <!-- Gemini 项目 ID 字段 -->
-          <div v-if="form.platform === 'gemini'">
-            <label class="mb-3 block text-sm font-semibold text-gray-700 dark:text-gray-300"
-              >项目 ID (可选)</label
-            >
-            <input
-              v-model="form.projectId"
-              class="form-input w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-400"
-              placeholder="例如：verdant-wares-464411-k9"
-              type="text"
-            />
-            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              Google Cloud/Workspace 账号可能需要提供项目 ID
-            </p>
+          <!-- Gemini-specific fields (Edit Mode) -->
+          <div v-if="form.platform === 'gemini'" class="space-y-4">
+            <div>
+              <label class="mb-3 block text-sm font-semibold text-gray-700 dark:text-gray-300">项目 ID (可选)</label>
+              <input
+                v-model="form.projectId"
+                class="form-input w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-400"
+                placeholder="例如：verdant-wares-464411-k9"
+                type="text"
+              />
+              <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Google Cloud/Workspace 账号可能需要提供项目 ID</p>
+            </div>
+            <div>
+              <label class="mb-3 block text-sm font-semibold text-gray-700 dark:text-gray-300">API Key (用于图像模型)</label>
+              <input
+                v-model="form.apiKey"
+                class="form-input w-full border-gray-300 font-mono text-xs dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-400"
+                placeholder="留空表示不更新"
+                type="password"
+              />
+              <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">用于访问标准 Gemini API (例如图像模型)。留空表示不更新。</p>
+            </div>
           </div>
 
           <!-- Claude 订阅类型选择（编辑模式） -->
@@ -2992,6 +2991,10 @@ const updateAccount = async () => {
     // Gemini 账号优先级更新
     if (props.account.platform === 'gemini') {
       data.priority = form.value.priority || 50
+      // 只有当有新的 API Key 时才更新
+      if (form.value.apiKey && form.value.apiKey.trim()) {
+        data.apiKey = form.value.apiKey
+      }
     }
 
     // Claude Console 特定更新

@@ -394,6 +394,9 @@ async function createAccount(accountData) {
     // 项目 ID（Google Cloud/Workspace 账号需要）
     projectId: accountData.projectId || '',
 
+    // API Key for standard Generative Language API (will be encrypted)
+    apiKey: accountData.apiKey ? encrypt(accountData.apiKey) : '',
+
     // 支持的模型列表（可选）
     supportedModels: accountData.supportedModels || [], // 空数组表示支持所有模型
 
@@ -446,6 +449,9 @@ async function getAccount(accountId) {
   }
   if (accountData.refreshToken) {
     accountData.refreshToken = decrypt(accountData.refreshToken)
+  }
+  if (accountData.apiKey) {
+    accountData.apiKey = decrypt(accountData.apiKey)
   }
 
   // 解析代理配置
@@ -506,6 +512,17 @@ async function updateAccount(accountId, updates) {
     if (!oldRefreshToken && updates.refreshToken) {
       needUpdateExpiry = true
     }
+  }
+
+  if (updates.apiKey) {
+    const maskedApiKey = updates.apiKey.substring(0, 12) + '...' + updates.apiKey.slice(-4)
+    logger.info(`🔑 [Backend] Updating Gemini API Key for account ${accountId}:`, {
+      accountId,
+      accountName: existingAccount.name,
+      maskedApiKey,
+      timestamp: now
+    })
+    updates.apiKey = encrypt(updates.apiKey)
   }
 
   // 更新账户类型时处理共享账户集合
@@ -646,6 +663,7 @@ async function getAllAccounts() {
         geminiOauth: accountData.geminiOauth ? '[ENCRYPTED]' : '',
         accessToken: accountData.accessToken ? '[ENCRYPTED]' : '',
         refreshToken: accountData.refreshToken ? '[ENCRYPTED]' : '',
+        apiKey: accountData.apiKey ? '[ENCRYPTED]' : '',
         // 添加 scopes 字段用于判断认证方式
         // 处理空字符串和默认值的情况
         scopes:
@@ -1347,6 +1365,10 @@ async function generateContentStream(
   signal = null,
   proxyConfig = null
 ) {
+  // Hook for Image Models
+  if (requestData.model && requestData.model.includes('-image-')) {
+    return _streamImageModel(client, requestData, signal, proxyConfig);
+  }
   const axios = require('axios')
   const CODE_ASSIST_ENDPOINT = 'https://cloudcode-pa.googleapis.com'
   const CODE_ASSIST_API_VERSION = 'v1internal'
@@ -1412,6 +1434,90 @@ async function generateContentStream(
   return response.data // 返回流对象
 }
 
+async function _streamImageModel(client, requestData, signal, proxyConfig) {
+  const axios = require('axios');
+  const { model, request: actualRequestData } = requestData;
+  logger.info(`🌊 Using Standard Generative API for Image Model: ${model}`);
+  const apiKey = client.apiKey;
+  if (!apiKey) {
+    throw new Error(`Account does not have a standard API Key configured for model ${model}`);
+  }
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?key=${apiKey}`;
+  const axiosConfig = {
+    url,
+    method: 'POST',
+    data: actualRequestData,
+    responseType: 'stream',
+    timeout: 120000,
+    headers: { 'Content-Type': 'application/json' },
+  };
+  if (signal) {
+    axiosConfig.signal = signal;
+  }
+  const proxyAgent = ProxyHelper.createProxyAgent(proxyConfig);
+  if (proxyAgent) {
+    axiosConfig.httpsAgent = proxyAgent;
+    logger.info(`🌐 Using proxy for Gemini Image API: ${ProxyHelper.getProxyDescription(proxyConfig)}`);
+  }
+  try {
+    const response = await axios(axiosConfig);
+    logger.info('✅ Image stream request successful, starting transmission.');
+    return response.data;
+  } catch (error) {
+    logger.error('❌ Error calling Generative Language API:', {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+    });
+    throw new Error(`Request to Google API failed with status ${error.response?.status}`);
+  }
+}
+
+async function streamImageModelWithApiKey(account, requestData, signal) {
+  const axios = require('axios');
+  const { model, request: actualRequestData } = requestData;
+  logger.info(`🌊 [Image API] Using Standard Generative API for Model: ${model}`);
+  
+  const apiKey = account.apiKey;
+  if (!apiKey) {
+    throw new Error(`Account ${account.id} does not have a standard API Key configured for model ${model}`);
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?key=${apiKey}`;
+  
+  const axiosConfig = {
+    url,
+    method: 'POST',
+    data: actualRequestData,
+    responseType: 'stream',
+    timeout: 120000,
+    headers: { 'Content-Type': 'application/json' },
+  };
+
+  if (signal) {
+    axiosConfig.signal = signal;
+  }
+
+  const proxyAgent = ProxyHelper.createProxyAgent(account.proxy);
+  if (proxyAgent) {
+    axiosConfig.httpsAgent = proxyAgent;
+    logger.info(`🌐 [Image API] Using proxy: ${ProxyHelper.getProxyDescription(account.proxy)}`);
+  }
+
+  try {
+    const response = await axios(axiosConfig);
+    logger.info('✅ [Image API] Stream request successful, starting transmission.');
+    return response.data;
+  } catch (error) {
+    logger.error('❌ [Image API] Error calling Generative Language API:', {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+    });
+    throw new Error(`Request to Google API failed with status ${error.response?.status}`);
+  }
+}
+
 module.exports = {
   generateAuthUrl,
   pollAuthorizationStatus,
@@ -1440,6 +1546,7 @@ module.exports = {
   countTokens,
   generateContent,
   generateContentStream,
+  streamImageModelWithApiKey,
   OAUTH_CLIENT_ID,
   OAUTH_SCOPES
 }

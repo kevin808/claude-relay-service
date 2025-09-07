@@ -3314,6 +3314,16 @@ router.put('/gemini-accounts/:accountId', authenticateAdmin, async (req, res) =>
       }
     }
 
+    // Log API key updates specifically
+    if (updates.apiKey) {
+      const maskedApiKey = updates.apiKey.substring(0, 12) + '...' + updates.apiKey.slice(-4)
+      logger.info(`🔑 [Admin Route] Gemini API Key update request for account ${accountId}:`, {
+        accountId,
+        maskedApiKey,
+        requestTime: new Date().toISOString()
+      })
+    }
+
     const updatedAccount = await geminiAccountService.updateAccount(accountId, updates)
 
     logger.success(`📝 Admin updated Gemini account: ${accountId}`)
